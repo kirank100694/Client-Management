@@ -1,16 +1,17 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Runtime.CompilerServices;
 
-namespace ClientManagement
+namespace ClientManagement.Models
 {
     public class ClientModel
     {
         public int ClientId { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "LicenceKey must be in uniquekey formateonly ")]
         public Guid LicenceKey { get; set; }
 
         [Required]
-        [StringLength(50, ErrorMessage = "LastName cannot be longer than 50 characters.")]
+        [StringLength(50, ErrorMessage = "ClientName cannot be longer than 50 characters.")]
         public string ClientName { get; set; } = null!;
 
         [Required]
@@ -19,8 +20,8 @@ namespace ClientManagement
         [Required]
         public DateTime LicenceEndDate { get; set; }
 
-        [Required]
-        [StringLength(500)]
+        [Required(ErrorMessage = "Description is required")]
+        [StringLength(200)]
         public string Description { get; set; } = null!;
 
         public DateTime CreatedDate { get; set; }

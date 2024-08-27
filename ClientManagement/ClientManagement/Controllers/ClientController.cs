@@ -1,27 +1,34 @@
-﻿using AutoMapper;
+﻿using ClientManagement.BusinessLogic.Contracts;
+using ClientManagement.Caching;
 using ClientManagement.Models;
-using ClientManagement.Repository;
-using Microsoft.AspNetCore.Http;
+using LazyCache;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ClientManagement.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class ClientController : ControllerBase
     {
         private readonly IClientRepository _clientRepository;
+        private readonly ICacheProvider _cacheProvider;
 
-        public ClientController(IClientRepository clientRepository) 
+        public ClientController(IClientRepository clientRepository, ICacheProvider cacheProvider) 
         {
             _clientRepository = clientRepository;
+            _cacheProvider = cacheProvider;
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetClients()
+        public async Task<IActionResult> GetClients(string name = "", string sortBy = "", bool sortByDescending = false,
+            int page = 0, int pageSize = 0)
         {
-            var clients = await _clientRepository.GetClients();
+            var clients = await _clientRepository.GetClients(name, sortBy, sortByDescending,
+             page, pageSize);
 
             if (clients != null && clients.Count == 0)
             {
@@ -34,14 +41,26 @@ namespace ClientManagement.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult> GetClientsById([FromRoute] int id)
         {
-            var clients = await _clientRepository.GetClientsById(id);
-
-            if (clients == null)
+            if (!_cacheProvider.TryGetValue(CacheKeys.Client, out List<ClientModel> patients))
             {
-                return BadRequest($"Client with ID {id} not found.");
+                patients = await _clientRepository.GetClients();
+
+                var cacheEntryOption = new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpiration = DateTime.Now.AddSeconds(30),
+                    SlidingExpiration = TimeSpan.FromSeconds(30),
+                    Size = 1024
+                };
+
+                _cacheProvider.Set(CacheKeys.Client, patients, cacheEntryOption);
+
+                if (patients == null)
+                {
+                    return BadRequest($"patient with ID {id} not found.");
+                }
             }
 
-            return Ok(clients);
+            return Ok(patients);
         }
 
         [HttpPost]
@@ -58,7 +77,7 @@ namespace ClientManagement.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult> UpdateClients([FromBody] ClientModel clientModel, [FromRoute] int id)
+        public async Task<ActionResult> UpdateClient([FromBody] ClientModel clientModel, [FromRoute] int id)
         {
             var existingClient = await _clientRepository.GetClientsById(id);
 
@@ -67,7 +86,7 @@ namespace ClientManagement.Controllers
                 return BadRequest($"Client Id {id} is not found.");
             }
 
-            await _clientRepository.UpdateClients(existingClient, clientModel);
+            await _clientRepository.UpdateClient(existingClient, clientModel);
 
             return Ok();
         }

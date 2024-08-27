@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClientManagement.Models;
 
-public partial class ClientManagmentContext : DbContext
+public partial class ClientManagmentContext : IdentityDbContext<IdentityUser>
 {
     public ClientManagmentContext()
     {
@@ -23,8 +23,6 @@ public partial class ClientManagmentContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        OnModelCreatingPartial(modelBuilder);
+        base.OnModelCreating(modelBuilder);
     }
-
-    partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
